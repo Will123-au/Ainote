@@ -73,3 +73,7 @@ export const getModel = (_name?: string): LanguageModel => {
 export const getResponsesModel = (): LanguageModel => {
   return DEFAULT_RESPONSES_MODEL;
 };
+
+export const supportsOpenAIWebSearch = (): boolean => {
+  return MODEL_PROVIDER === 'openai';
+};

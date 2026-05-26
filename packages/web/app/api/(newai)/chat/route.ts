@@ -8,7 +8,7 @@ import { NextResponse, NextRequest } from 'next/server';
 import { incrementAndLogTokenUsage } from '@/lib/incrementAndLogTokenUsage';
 import { handleAuthorizationV2 } from '@/lib/handleAuthorization';
 import { openai } from '@ai-sdk/openai';
-import { getModel, getResponsesModel } from '@/lib/models';
+import { getModel, getResponsesModel, supportsOpenAIWebSearch } from '@/lib/models';
 import {
   buildChatSystemPrompt,
   computeChatPromptHints,
@@ -517,7 +517,13 @@ export async function POST(req: NextRequest) {
         dataStream.writeData('initialized call');
 
         // Use search-enabled models when requested or when deep search is enabled
-        const shouldUseSearch = enableSearchGrounding || deepSearch;
+        const searchRequested = enableSearchGrounding || deepSearch;
+        const shouldUseSearch = searchRequested && supportsOpenAIWebSearch();
+        if (searchRequested && !shouldUseSearch) {
+          console.log(
+            '[Chat API] Search requested but disabled for the configured provider; using default chat model'
+          );
+        }
 
         // Debug: Log tool invocations in messages
         const toolInvocations = messagesToProcess.filter((m) => m.role === 'tool');

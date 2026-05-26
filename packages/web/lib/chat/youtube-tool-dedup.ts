@@ -104,9 +104,6 @@ export function applyYoutubeToolDedupToMessage(
 
   if (toolName !== 'getYoutubeVideoId') {
     if (extracted && (!tool.toolCallId || !tool.toolName)) {
-      console.log(
-        `[Chat API] Extracting toolCallId/toolName from content array: ${extracted.firstItem.toolCallId}, ${extracted.firstItem.toolName}`
-      );
       return {
         ...message,
         toolCallId: extracted.firstItem.toolCallId,
