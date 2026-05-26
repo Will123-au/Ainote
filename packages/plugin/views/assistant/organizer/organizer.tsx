@@ -37,6 +37,7 @@ export const AssistantView: React.FC<AssistantViewProps> = ({
   const [activeFile, setActiveFile] = React.useState<TFile | null>(null);
   const [noteContent, setNoteContent] = React.useState<string>("");
   const [refreshKey, setRefreshKey] = React.useState<number>(0);
+  const [suggestionFilePath, setSuggestionFilePath] = React.useState<string | null>(null);
   const [error, setError] = React.useState<string | null>(null);
   const [isLicenseValid, setIsLicenseValid] = React.useState(false);
   const [isConnected, setIsConnected] = React.useState(true);
@@ -44,6 +45,7 @@ export const AssistantView: React.FC<AssistantViewProps> = ({
   // Use refs to track the active file and path for rename detection
   const activeFilePathRef = React.useRef<string | null>(null);
   const activeFileRef = React.useRef<TFile | null>(null);
+  const suggestionFilePathRef = React.useRef<string | null>(null);
   const isRenamingRef = React.useRef<boolean>(false);
 
   const isMediaFile = React.useMemo(
@@ -82,6 +84,10 @@ export const AssistantView: React.FC<AssistantViewProps> = ({
       // Update the refs when active file changes
       activeFileRef.current = file;
       activeFilePathRef.current = file ? file.path : null;
+      if (file?.path !== suggestionFilePathRef.current) {
+        suggestionFilePathRef.current = null;
+        setSuggestionFilePath(null);
+      }
     } catch (err) {
       logger.error("Error updating active file:", err);
       setError("Failed to load file content");
@@ -178,6 +184,9 @@ export const AssistantView: React.FC<AssistantViewProps> = ({
   }, [updateActiveFile, plugin.app.workspace, plugin.app.vault]);
 
   const refreshContext = React.useCallback(() => {
+    const path = activeFileRef.current?.path ?? null;
+    suggestionFilePathRef.current = path;
+    setSuggestionFilePath(path);
     setRefreshKey(prevKey => prevKey + 1);
     setError(null);
 
@@ -352,104 +361,116 @@ export const AssistantView: React.FC<AssistantViewProps> = ({
 
       {/* Content sections - consistent padding with other tabs */}
       <div className={tw("flex flex-col px-3")}>
-        {renderSection(
-          <ClassificationContainer
-            plugin={plugin}
-            file={activeFile}
-            content={noteContent}
-            refreshKey={refreshKey}
-            onTokenLimitError={onTokenLimitError}
-            onFileRename={async newFile => {
-              // Set flag to prevent updateActiveFile from interfering
-              isRenamingRef.current = true;
-
-              // Update refs first
-              activeFileRef.current = newFile;
-              activeFilePathRef.current = newFile.path;
-
-              // Then update state
-              setActiveFile(newFile);
-
-              // Also update the content to ensure everything is in sync
-              try {
-                const content = await plugin.app.vault.read(newFile);
-                setNoteContent(content);
-              } catch (err) {
-                logger.error("Error reading renamed file content:", err);
-              }
-
-              // Force a refresh of all child components
-              setRefreshKey(prev => prev + 1);
-
-              // Clear the flag after a delay to allow other updates
-              setTimeout(() => {
-                isRenamingRef.current = false;
-                // Verify state is correct, fix if needed
-                const currentActive = plugin.app.workspace.getActiveFile();
-                if (
-                  currentActive &&
-                  currentActive.path === newFile.path &&
-                  activeFileRef.current?.path !== newFile.path
-                ) {
-                  setActiveFile(newFile);
-                  activeFileRef.current = newFile;
-                  activeFilePathRef.current = newFile.path;
-                }
-              }, 500);
-            }}
-          />,
-          "Error loading classification"
-        )}
-
-        <SectionHeader text="Tags" icon="🏷️ " />
-        {renderSection(
-          <SimilarTags
-            plugin={plugin}
-            file={activeFile}
-            content={noteContent}
-            refreshKey={refreshKey}
-            onTokenLimitError={onTokenLimitError}
-          />,
-          "Error loading tags"
-        )}
-
-        {plugin.settings.enableTitleSuggestions && (
+        {suggestionFilePath !== activeFile.path ? (
+          <EmptyState
+            message="Click refresh to generate AI suggestions for this file."
+            showRefresh={false}
+            onRefresh={refreshContext}
+          />
+        ) : (
           <>
-            <SectionHeader text="Titles" icon="💡 " />
             {renderSection(
-              <RenameSuggestion
+              <ClassificationContainer
                 plugin={plugin}
                 file={activeFile}
                 content={noteContent}
                 refreshKey={refreshKey}
+                onTokenLimitError={onTokenLimitError}
+                onFileRename={async newFile => {
+                  // Set flag to prevent updateActiveFile from interfering
+                  isRenamingRef.current = true;
+
+                  // Update refs first
+                  activeFileRef.current = newFile;
+                  activeFilePathRef.current = newFile.path;
+                  suggestionFilePathRef.current = newFile.path;
+                  setSuggestionFilePath(newFile.path);
+
+                  // Then update state
+                  setActiveFile(newFile);
+
+                  // Also update the content to ensure everything is in sync
+                  try {
+                    const content = await plugin.app.vault.read(newFile);
+                    setNoteContent(content);
+                  } catch (err) {
+                    logger.error("Error reading renamed file content:", err);
+                  }
+
+                  // Force a refresh of all child components
+                  setRefreshKey(prev => prev + 1);
+
+                  // Clear the flag after a delay to allow other updates
+                  setTimeout(() => {
+                    isRenamingRef.current = false;
+                    // Verify state is correct, fix if needed
+                    const currentActive = plugin.app.workspace.getActiveFile();
+                    if (
+                      currentActive &&
+                      currentActive.path === newFile.path &&
+                      activeFileRef.current?.path !== newFile.path
+                    ) {
+                      setActiveFile(newFile);
+                      activeFileRef.current = newFile;
+                      activeFilePathRef.current = newFile.path;
+                    }
+                  }, 500);
+                }}
               />,
-              "Error loading title suggestions"
+              "Error loading classification"
             )}
-          </>
-        )}
 
-        <SectionHeader text="Folders" icon="📁 " />
-        {renderSection(
-          <SimilarFolderBox
-            plugin={plugin}
-            file={activeFile}
-            content={noteContent}
-            refreshKey={refreshKey}
-            onTokenLimitError={onTokenLimitError}
-          />,
-          "Error loading folder suggestions"
-        )}
-
-        {plugin.settings.enableAtomicNotes && (
-          <>
-            <SectionHeader text="Atomic notes" icon="✂️ " />
+            <SectionHeader text="Tags" icon="🏷️ " />
             {renderSection(
-              <AtomicNotes
+              <SimilarTags
                 plugin={plugin}
-                activeFile={activeFile}
+                file={activeFile}
+                content={noteContent}
                 refreshKey={refreshKey}
+                onTokenLimitError={onTokenLimitError}
               />,
-              "Error loading atomic notes"
+              "Error loading tags"
+            )}
+
+            {plugin.settings.enableTitleSuggestions && (
+              <>
+                <SectionHeader text="Titles" icon="💡 " />
+                {renderSection(
+                  <RenameSuggestion
+                    plugin={plugin}
+                    file={activeFile}
+                    content={noteContent}
+                    refreshKey={refreshKey}
+                  />,
+                  "Error loading title suggestions"
+                )}
+              </>
+            )}
+
+            <SectionHeader text="Folders" icon="📁 " />
+            {renderSection(
+              <SimilarFolderBox
+                plugin={plugin}
+                file={activeFile}
+                content={noteContent}
+                refreshKey={refreshKey}
+                onTokenLimitError={onTokenLimitError}
+              />,
+              "Error loading folder suggestions"
+            )}
+
+            {plugin.settings.enableAtomicNotes && (
+              <>
+                <SectionHeader text="Atomic notes" icon="✂️ " />
+                {renderSection(
+                  <AtomicNotes
+                    plugin={plugin}
+                    activeFile={activeFile}
+                    refreshKey={refreshKey}
+                  />,
+                  "Error loading atomic notes"
+                )}
+              </>
             )}
           </>
         )}
