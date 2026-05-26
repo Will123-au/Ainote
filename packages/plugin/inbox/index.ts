@@ -206,6 +206,7 @@ export class Inbox {
       concurrency: MAX_CONCURRENT_TASKS,
       timeout: 30000,
       onProcess: async (file: TFile, metadata?: Record<string, any>) => {
+        let mediaSlotReserved = false;
         try {
           const isMediaFile = this.plugin.shouldCreateMarkdownContainer(file);
 
@@ -220,16 +221,16 @@ export class Inbox {
               return;
             }
             this.activeMediaTasks++;
+            mediaSlotReserved = true;
           }
 
           await this.processInboxFile(file, metadata?.hash);
-
-          if (isMediaFile) {
-            this.activeMediaTasks--;
-            // Process next media file if available
+        } finally {
+          if (mediaSlotReserved) {
+            this.activeMediaTasks = Math.max(0, this.activeMediaTasks - 1);
+            // Process next media file if available, including after failures/timeouts.
             this.processNextMediaFile();
           }
-        } finally {
           if (metadata?.hash) {
             this.queue.remove(metadata.hash);
           }
