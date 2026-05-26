@@ -1519,7 +1519,7 @@ export const ChatComponent: React.FC<ChatComponentProps> = ({
 
     // Validate API key before sending
     const apiKey = plugin.getApiKey()?.trim();
-    if (!apiKey || apiKey.length === 0) {
+    if (!plugin.settings.enableSelfHosting && (!apiKey || apiKey.length === 0)) {
       new Notice(
         "API key is missing. Please set your API key in plugin settings.",
         5000
