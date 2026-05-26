@@ -7,6 +7,10 @@ interface SearchArgs {
   query: string;
 }
 
+function escapeRegExp(value: string): string {
+  return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
 export function SearchHandler({
   toolInvocation,
   handleAddResult,
@@ -19,7 +23,15 @@ export function SearchHandler({
     const PREVIEW_LENGTH = 500;
     
     const files = app.vault.getMarkdownFiles();
-    const searchTerms = query.toLowerCase().split(/\s+/);
+    const searchTerms = query
+      .toLowerCase()
+      .split(/\s+/)
+      .map(term => term.trim())
+      .filter(Boolean);
+
+    if (searchTerms.length === 0) {
+      return [];
+    }
 
     const searchResults = await Promise.all(
       files.map(async file => {
@@ -27,7 +39,7 @@ export function SearchHandler({
         const lowerContent = content.toLowerCase();
 
         const allTermsPresent = searchTerms.every(term => {
-          const regex = new RegExp(`(^|\\W)${term}(\\W|$)`, "i");
+          const regex = new RegExp(`(^|\\W)${escapeRegExp(term)}(\\W|$)`, "i");
           return regex.test(lowerContent);
         });
 
