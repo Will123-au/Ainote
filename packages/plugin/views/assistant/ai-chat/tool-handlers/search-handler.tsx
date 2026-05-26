@@ -2,13 +2,10 @@ import React, { useRef } from "react";
 import { logger } from "../../../../services/logger";
 import { addSearchContext, useContextItems } from "../use-context-items";
 import { ToolHandlerProps } from "./types";
+import { getVaultSearchIndex } from "../services/vault-search-index";
 
 interface SearchArgs {
   query: string;
-}
-
-function escapeRegExp(value: string): string {
-  return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 }
 
 export function SearchHandler({
@@ -20,50 +17,7 @@ export function SearchHandler({
 
   const searchNotes = async (query: string) => {
     const MAX_RESULTS = 10;
-    const PREVIEW_LENGTH = 500;
-    
-    const files = app.vault.getMarkdownFiles();
-    const searchTerms = query
-      .toLowerCase()
-      .split(/\s+/)
-      .map(term => term.trim())
-      .filter(Boolean);
-
-    if (searchTerms.length === 0) {
-      return [];
-    }
-
-    const searchResults = await Promise.all(
-      files.map(async file => {
-        const content = await app.vault.read(file);
-        const lowerContent = content.toLowerCase();
-
-        const allTermsPresent = searchTerms.every(term => {
-          const regex = new RegExp(`(^|\\W)${escapeRegExp(term)}(\\W|$)`, "i");
-          return regex.test(lowerContent);
-        });
-
-        if (allTermsPresent) {
-          return {
-            title: file.basename,
-            contentPreview: content.slice(0, PREVIEW_LENGTH) + (content.length > PREVIEW_LENGTH ? '...' : ''),
-            contentLength: content.length,
-            wordCount: content.split(/\s+/).length,
-            path: file.path,
-            // Keep full content for context UI, but don't send to AI
-            content: content,
-          };
-        }
-        return null;
-      })
-    );
-
-    const filteredResults = searchResults.filter((result): result is NonNullable<typeof result> => 
-      result !== null
-    );
-    
-    // Limit to MAX_RESULTS
-    return filteredResults.slice(0, MAX_RESULTS);
+    return getVaultSearchIndex(app).search(query, MAX_RESULTS);
   };
 
   React.useEffect(() => {
@@ -77,7 +31,7 @@ export function SearchHandler({
           
           // Add ONLY metadata to context (reference-based, ephemeral)
           // Full content is NOT stored in context
-          const contextResults = searchResults.map(({ content, ...metadata }) => metadata);
+          const contextResults = searchResults;
           addSearchContext(query, contextResults);
           
           // Send same minimal data to AI (metadata only)
