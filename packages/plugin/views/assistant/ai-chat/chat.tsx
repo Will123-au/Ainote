@@ -76,6 +76,100 @@ interface ChatComponentProps {
   isChatTabActive?: boolean;
 }
 
+const STORED_CONTEXT_PREVIEW_CHARS = 500;
+
+function previewText(value: unknown, max = STORED_CONTEXT_PREVIEW_CHARS): string {
+  if (typeof value !== "string" || value.length === 0) {
+    return "";
+  }
+  return value.length > max ? `${value.slice(0, max)}...` : value;
+}
+
+function compactStoredContextItem(item: any): any {
+  if (!item || typeof item !== "object") {
+    return item;
+  }
+
+  if ("content" in item) {
+    return {
+      ...item,
+      content: previewText(item.content),
+      contentLength:
+        typeof item.content === "string" ? item.content.length : item.contentLength,
+    };
+  }
+
+  if ("transcript" in item) {
+    return {
+      ...item,
+      transcript: previewText(item.transcript),
+      transcriptLength:
+        typeof item.transcript === "string"
+          ? item.transcript.length
+          : item.transcriptLength,
+    };
+  }
+
+  return item;
+}
+
+function compactStoredContextItems(contextItems: {
+  files: Record<string, any>;
+  folders: Record<string, any>;
+  tags: Record<string, any>;
+  youtubeVideos: Record<string, any>;
+  searchResults: Record<string, any>;
+  textSelections: Record<string, any>;
+  currentFile: any | null;
+}) {
+  return {
+    files: Object.fromEntries(
+      Object.entries(contextItems.files).map(([id, file]) => [
+        id,
+        compactStoredContextItem(file),
+      ])
+    ),
+    folders: Object.fromEntries(
+      Object.entries(contextItems.folders).map(([id, folder]) => [
+        id,
+        {
+          ...folder,
+          files: Array.isArray(folder.files)
+            ? folder.files.map(compactStoredContextItem)
+            : [],
+        },
+      ])
+    ),
+    tags: Object.fromEntries(
+      Object.entries(contextItems.tags).map(([id, tag]) => [
+        id,
+        {
+          ...tag,
+          files: Array.isArray(tag.files)
+            ? tag.files.map(compactStoredContextItem)
+            : [],
+        },
+      ])
+    ),
+    youtubeVideos: Object.fromEntries(
+      Object.entries(contextItems.youtubeVideos).map(([id, video]) => [
+        id,
+        compactStoredContextItem(video),
+      ])
+    ),
+    searchResults: contextItems.searchResults,
+    textSelections: Object.fromEntries(
+      Object.entries(contextItems.textSelections).map(([id, selection]) => [
+        id,
+        compactStoredContextItem(selection),
+      ])
+    ),
+    currentFile: contextItems.currentFile
+      ? compactStoredContextItem(contextItems.currentFile)
+      : null,
+  };
+}
+
 export const ChatComponent: React.FC<ChatComponentProps> = ({
   apiKey,
   inputRef,
@@ -933,7 +1027,7 @@ export const ChatComponent: React.FC<ChatComponentProps> = ({
 
               // Store context items to restore when switching chats
               const store = useContextItems.getState();
-              const contextItemsToStore = {
+              const contextItemsToStore = compactStoredContextItems({
                 files: { ...store.files },
                 folders: { ...store.folders },
                 tags: { ...store.tags },
@@ -943,7 +1037,7 @@ export const ChatComponent: React.FC<ChatComponentProps> = ({
                 currentFile: store.currentFile
                   ? { ...store.currentFile }
                   : null,
-              };
+              });
 
               chatHistoryManager.updateSession(sessionId, {
                 messages: currentMessages,
@@ -1338,7 +1432,7 @@ export const ChatComponent: React.FC<ChatComponentProps> = ({
         });
 
         // Store context items to restore when switching chats
-        const contextItemsToStore = {
+        const contextItemsToStore = compactStoredContextItems({
           files: { ...files },
           folders: { ...folders },
           tags: { ...tags },
@@ -1346,7 +1440,7 @@ export const ChatComponent: React.FC<ChatComponentProps> = ({
           searchResults: { ...searchResults },
           textSelections: { ...textSelections },
           currentFile: currentFile ? { ...currentFile } : null,
-        };
+        });
 
         chatHistoryManager.updateSession(activeChatId, {
           messages,
@@ -1384,7 +1478,7 @@ export const ChatComponent: React.FC<ChatComponentProps> = ({
       const session = chatHistoryManager.getSession(activeChatId);
       if (session) {
         // Store context items to restore when switching chats
-        const contextItemsToStore = {
+        const contextItemsToStore = compactStoredContextItems({
           files: { ...files },
           folders: { ...folders },
           tags: { ...tags },
@@ -1392,7 +1486,7 @@ export const ChatComponent: React.FC<ChatComponentProps> = ({
           searchResults: { ...searchResults },
           textSelections: { ...textSelections },
           currentFile: currentFile ? { ...currentFile } : null,
-        };
+        });
 
         // Only update if context items actually changed
         const currentContextKey = JSON.stringify(contextItemsToStore);
