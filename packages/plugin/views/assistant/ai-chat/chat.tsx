@@ -77,6 +77,8 @@ interface ChatComponentProps {
 }
 
 const STORED_CONTEXT_PREVIEW_CHARS = 500;
+const DEFAULT_CONTEXT_BUDGET_TOKENS = 32_000;
+const CHARS_PER_TOKEN_ESTIMATE = 4;
 
 function previewText(value: unknown, max = STORED_CONTEXT_PREVIEW_CHARS): string {
   if (typeof value !== "string" || value.length === 0) {
@@ -168,6 +170,90 @@ function compactStoredContextItems(contextItems: {
       ? compactStoredContextItem(contextItems.currentFile)
       : null,
   };
+}
+
+function shrinkLargeContextFields(value: unknown, previewChars: number): unknown {
+  if (typeof value === "string") {
+    return previewText(value, previewChars);
+  }
+
+  if (Array.isArray(value)) {
+    return value.slice(0, 50).map(item => shrinkLargeContextFields(item, previewChars));
+  }
+
+  if (!value || typeof value !== "object") {
+    return value;
+  }
+
+  return Object.fromEntries(
+    Object.entries(value as Record<string, unknown>).map(([key, nested]) => {
+      if (
+        key === "content" ||
+        key === "transcript" ||
+        key === "selectedText"
+      ) {
+        return [key, previewText(nested, previewChars)];
+      }
+      if (key === "files" && Array.isArray(nested)) {
+        return [
+          key,
+          nested
+            .slice(0, 30)
+            .map(item => shrinkLargeContextFields(item, Math.min(previewChars, 300))),
+        ];
+      }
+      return [key, shrinkLargeContextFields(nested, previewChars)];
+    })
+  );
+}
+
+function trimMiddle(value: string, maxChars: number): string {
+  if (value.length <= maxChars) {
+    return value;
+  }
+  const marker = "\n[...context trimmed to fit token budget...]\n";
+  const sideBudget = Math.max(0, Math.floor((maxChars - marker.length) / 2));
+  return `${value.slice(0, sideBudget)}${marker}${value.slice(-sideBudget)}`;
+}
+
+function fitContextToTokenBudget(
+  context: string,
+  maxTokens: number | undefined
+): string {
+  const tokenBudget =
+    typeof maxTokens === "number" && maxTokens > 0
+      ? maxTokens
+      : DEFAULT_CONTEXT_BUDGET_TOKENS;
+  const maxChars = Math.max(4_000, Math.floor(tokenBudget * CHARS_PER_TOKEN_ESTIMATE * 0.85));
+
+  if (context.length <= maxChars) {
+    return context;
+  }
+
+  const jsonStart = context.indexOf("{");
+  const jsonEnd = context.lastIndexOf("}");
+  if (jsonStart === -1 || jsonEnd <= jsonStart) {
+    return trimMiddle(context, maxChars);
+  }
+
+  try {
+    const prefix = context.slice(0, jsonStart);
+    const suffix = context.slice(jsonEnd + 1);
+    const parsed = JSON.parse(context.slice(jsonStart, jsonEnd + 1));
+    const trimmed = JSON.stringify(shrinkLargeContextFields(parsed, 700));
+    const note =
+      "Context auto-trimmed for token budget; full file content can be fetched by path if needed.\n";
+    const rebuilt = `${note}${prefix}${trimmed}${suffix}`;
+
+    if (rebuilt.length <= maxChars) {
+      return rebuilt;
+    }
+
+    const aggressivelyTrimmed = JSON.stringify(shrinkLargeContextFields(parsed, 220));
+    return trimMiddle(`${note}${prefix}${aggressivelyTrimmed}${suffix}`, maxChars);
+  } catch {
+    return trimMiddle(context, maxChars);
+  }
 }
 
 export const ChatComponent: React.FC<ChatComponentProps> = ({
@@ -554,7 +640,10 @@ export const ChatComponent: React.FC<ChatComponentProps> = ({
 
       // prepareRequestBody is only called for normal requests, not reload({ body })
       // So we just use fresh context here
-      const contextToSend = freshFullContext;
+      const contextToSend = fitContextToTokenBudget(
+        freshFullContext,
+        plugin.settings.maxChatTokens
+      );
 
       // Save for onFinish snapshotting
       lastContextSentRef.current = contextToSend;
@@ -1842,7 +1931,10 @@ export const ChatComponent: React.FC<ChatComponentProps> = ({
           selectedModel === "gpt-4o-search-preview" ||
           selectedModel === "gpt-4o-mini-search-preview",
         deepSearch: plugin.settings.enableDeepSearch,
-        newUnifiedContext: snapshot, // ✅ the important part
+        newUnifiedContext: fitContextToTokenBudget(
+          snapshot,
+          plugin.settings.maxChatTokens
+        ), // exact snapshot, trimmed only if it exceeds the token budget
         ...(plugin.settings.chatMaxStepsPreference !== "auto"
           ? { requestedMaxSteps: plugin.settings.chatMaxStepsPreference }
           : {}),
