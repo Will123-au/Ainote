@@ -256,6 +256,37 @@ function fitContextToTokenBudget(
   }
 }
 
+function hashString(value: string): string {
+  let hash = 0;
+  for (let i = 0; i < value.length; i++) {
+    hash = (hash << 5) - hash + value.charCodeAt(i);
+    hash |= 0;
+  }
+  return Math.abs(hash).toString(36);
+}
+
+function createContextSnapshotRefs(
+  messages: Message[],
+  snapshots: Record<string, string>
+) {
+  return Object.fromEntries(
+    messages
+      .filter(msg => msg.role === "assistant" && msg.id && snapshots[msg.id])
+      .map(msg => {
+        const snapshot = snapshots[msg.id];
+        return [
+          msg.id,
+          {
+            hash: hashString(snapshot),
+            length: snapshot.length,
+            preview: previewText(snapshot, 500),
+            createdAt: Date.now(),
+          },
+        ];
+      })
+  );
+}
+
 export const ChatComponent: React.FC<ChatComponentProps> = ({
   apiKey,
   inputRef,
@@ -1094,18 +1125,10 @@ export const ChatComponent: React.FC<ChatComponentProps> = ({
             }
 
             if (session) {
-              // Store context snapshots
-              const messageContextSnapshots: Record<string, string> = {};
-              currentMessages.forEach(msg => {
-                if (
-                  msg.role === "assistant" &&
-                  msg.id &&
-                  contextByAssistantIdRef.current[msg.id]
-                ) {
-                  messageContextSnapshots[msg.id] =
-                    contextByAssistantIdRef.current[msg.id];
-                }
-              });
+              const messageContextRefs = createContextSnapshotRefs(
+                currentMessages,
+                contextByAssistantIdRef.current
+              );
 
               // Auto-generate title if needed
               let title = session.title;
@@ -1130,7 +1153,8 @@ export const ChatComponent: React.FC<ChatComponentProps> = ({
 
               chatHistoryManager.updateSession(sessionId, {
                 messages: currentMessages,
-                messageContextSnapshots,
+                messageContextSnapshots: {},
+                messageContextRefs,
                 title,
                 contextItems: contextItemsToStore,
               });
@@ -1142,7 +1166,7 @@ export const ChatComponent: React.FC<ChatComponentProps> = ({
                 sessionId,
                 messagesCount: currentMessages.length,
                 title,
-                contextSnapshotsCount: Object.keys(messageContextSnapshots)
+                contextSnapshotsCount: Object.keys(messageContextRefs)
                   .length,
               });
 
@@ -1321,11 +1345,14 @@ export const ChatComponent: React.FC<ChatComponentProps> = ({
       if (session && session.messages.length > 0) {
         setMessages(session.messages);
 
-        // Restore context snapshots from saved session
+        // Restore legacy full snapshots only for older history files. New saves use
+        // lightweight refs and keep full snapshots in memory for the active session.
         if (session.messageContextSnapshots) {
           Object.entries(session.messageContextSnapshots).forEach(
             ([messageId, context]) => {
-              contextByAssistantIdRef.current[messageId] = context;
+              if (context.length <= 20_000) {
+                contextByAssistantIdRef.current[messageId] = context;
+              }
             }
           );
         }
@@ -1507,18 +1534,10 @@ export const ChatComponent: React.FC<ChatComponentProps> = ({
           timestamp: Date.now(),
         };
 
-        // Store context snapshots for assistant messages (for refresh functionality)
-        const messageContextSnapshots: Record<string, string> = {};
-        messages.forEach(msg => {
-          if (
-            msg.role === "assistant" &&
-            msg.id &&
-            contextByAssistantIdRef.current[msg.id]
-          ) {
-            messageContextSnapshots[msg.id] =
-              contextByAssistantIdRef.current[msg.id];
-          }
-        });
+        const messageContextRefs = createContextSnapshotRefs(
+          messages,
+          contextByAssistantIdRef.current
+        );
 
         // Store context items to restore when switching chats
         const contextItemsToStore = compactStoredContextItems({
@@ -1535,7 +1554,8 @@ export const ChatComponent: React.FC<ChatComponentProps> = ({
           messages,
           title,
           contextSnapshot: JSON.stringify(contextMetadata),
-          messageContextSnapshots,
+          messageContextSnapshots: {},
+          messageContextRefs,
           contextItems: contextItemsToStore,
         });
 
@@ -1872,13 +1892,21 @@ export const ChatComponent: React.FC<ChatComponentProps> = ({
       // First try in-memory ref (for newly generated messages)
       let snapshot = contextByAssistantIdRef.current[messageId];
 
-      // If not in memory, try to load from saved session
+      // If not in memory, only restore small legacy snapshots. New history stores
+      // lightweight refs, so refresh falls back to current context after restart.
       if (!snapshot && activeChatId) {
         const session = chatHistoryManager.getSession(activeChatId);
-        if (session?.messageContextSnapshots?.[messageId]) {
+        if (
+          session?.messageContextSnapshots?.[messageId] &&
+          session.messageContextSnapshots[messageId].length <= 20_000
+        ) {
           snapshot = session.messageContextSnapshots[messageId];
-          // Restore to memory for future use
           contextByAssistantIdRef.current[messageId] = snapshot;
+        } else if (session?.messageContextRefs?.[messageId]) {
+          console.warn("[Chat] Full context snapshot is not persisted; using current context", {
+            messageId,
+            ref: session.messageContextRefs[messageId],
+          });
         }
       }
 

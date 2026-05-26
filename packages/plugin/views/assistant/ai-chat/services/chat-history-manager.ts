@@ -13,6 +13,15 @@ export interface ChatSession {
   model?: string; // Selected model for this session
   contextSnapshot?: string; // Optional: context used when session was created
   messageContextSnapshots?: Record<string, string>; // Map of message ID to context snapshot for refresh
+  messageContextRefs?: Record<
+    string,
+    {
+      hash: string;
+      length: number;
+      preview: string;
+      createdAt: number;
+    }
+  >; // Lightweight references to message context snapshots; full text stays in memory only.
   contextItems?: {
     files?: Record<string, any>;
     folders?: Record<string, any>;
@@ -300,4 +309,3 @@ export class ChatHistoryManager {
     return "New Chat";
   }
 }
-
