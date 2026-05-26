@@ -25,7 +25,7 @@ export async function POST(request: NextRequest) {
       model as any // Type cast for compatibility
     );
     // increment tokenUsage
-    const tokens = response.usage.totalTokens;
+    const tokens = response.usage?.totalTokens ?? 0;
     console.log("incrementing token usage classify", userId, tokens);
     await incrementAndLogTokenUsage(userId, tokens);
     const documentType = response.object.documentType;
@@ -53,6 +53,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Fallback for other errors
+    console.error('Classification error:', error);
     const errorMessage = error instanceof Error ? error.message : 'Failed to classify document';
     return NextResponse.json(
       { error: errorMessage },
