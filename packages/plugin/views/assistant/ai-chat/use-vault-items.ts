@@ -37,8 +37,8 @@ export function useVaultItems() {
 
     // Get all tags from metadata cache
     const tags = new Set<string>();
-    plugin.app.metadataCache.getCachedFiles().forEach(filePath => {
-      const cache = plugin.app.metadataCache.getCache(filePath);
+    plugin.app.vault.getMarkdownFiles().forEach(file => {
+      const cache = plugin.app.metadataCache.getFileCache(file);
       if (cache?.tags) {
         cache.tags.forEach(tagCache => {
           tags.add(tagCache.tag.replace('#', ''));
@@ -65,4 +65,4 @@ export function useVaultItems() {
       }
     };
   }, [plugin]);
-} 
+}

@@ -1,6 +1,6 @@
 import * as React from "react";
 import { ErrorBox } from "./error-box";
-import FileOrganizer from "../../..";
+import FileOrganizer from "../../../..";
 
 interface LicenseValidatorProps {
   apiKey: string;
@@ -59,8 +59,8 @@ export const LicenseValidator: React.FC<LicenseValidatorProps> = ({
             <button
               onClick={() => {
                 // Open Obsidian settings and navigate to plugin settings
-                plugin.app.setting.open();
-                plugin.app.setting.openTabById("fileorganizer2000");
+                (plugin.app as any).setting.open();
+                (plugin.app as any).setting.openTabById("fileorganizer2000");
               }}
               className="px-3 py-1.5 bg-[--interactive-accent] text-[--text-on-accent] rounded hover:bg-[--interactive-accent-hover] transition-colors duration-200"
             >

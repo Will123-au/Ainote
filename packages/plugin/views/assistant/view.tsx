@@ -237,11 +237,11 @@ function AssistantContent({
 
     // Listen to workspace events
     const handler = () => updateProcessingCount();
-    plugin.app.workspace.on("file-organizer:processing-step", handler);
+    (plugin.app.workspace as any).on("file-organizer:processing-step", handler);
 
     return () => {
       clearInterval(interval);
-      plugin.app.workspace.off("file-organizer:processing-step", handler);
+      (plugin.app.workspace as any).off("file-organizer:processing-step", handler);
     };
   }, [plugin]);
 

@@ -377,7 +377,7 @@ export const ExperimentTab: React.FC<ExperimentTabProps> = ({ plugin }) => {
 
 interface ToggleSettingProps {
   name: string;
-  description: string | JSX.Element;
+  description: React.ReactNode;
   value: boolean;
   onChange: (value: boolean) => void;
 }

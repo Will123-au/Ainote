@@ -2,7 +2,7 @@ import React, { useState, useRef, useEffect } from "react";
 import { Search, Clock, X } from "lucide-react";
 import { ChatSession, ChatHistoryManager } from "../services/chat-history-manager";
 import { tw } from "../../../../lib/utils";
-import { moment, App } from "obsidian";
+import { App } from "obsidian";
 import Fuse from "fuse.js";
 
 interface ChatHistoryComboboxProps {
@@ -201,7 +201,7 @@ export function ChatHistoryCombobox({
             ) : (
               filteredSessions.map((session, index) => {
                 const messageCount = getMessageCount(session);
-                const relativeTime = moment(session.updatedAt).fromNow();
+                const relativeTime = window.moment(session.updatedAt).fromNow();
                 const isActive = activeChatId === session.id;
                 const isSelected = index === selectedIndex;
 
@@ -271,4 +271,3 @@ export function ChatHistoryCombobox({
     </div>
   );
 }
-

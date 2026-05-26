@@ -3,7 +3,6 @@ import { X } from "lucide-react";
 import { ChatSession } from "../services/chat-history-manager";
 import { tw } from "../../../../lib/utils";
 import { StyledContainer } from "../../../../components/ui/utils";
-import { moment } from "obsidian";
 
 interface ChatHistorySidebarProps {
   sessions: ChatSession[];
@@ -44,7 +43,7 @@ export function ChatHistorySidebar({
           ) : (
             sessions.map((session) => {
               const messageCount = getMessageCount(session);
-              const relativeTime = moment(session.updatedAt).fromNow();
+              const relativeTime = window.moment(session.updatedAt).fromNow();
 
               return (
                 <div
@@ -100,4 +99,3 @@ export function ChatHistorySidebar({
     </StyledContainer>
   );
 }
-

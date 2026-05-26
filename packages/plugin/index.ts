@@ -1731,7 +1731,7 @@ export default class FileOrganizer extends Plugin {
       name: "Extract selection to new note",
       editorCallback: async () => {
         const result = await extractSelectionToNewNote(this.app);
-        if (!result.ok) {
+        if (result.ok === false) {
           new Notice(result.error, 4000);
           return;
         }
@@ -1751,7 +1751,7 @@ export default class FileOrganizer extends Plugin {
             .setIcon("file-plus")
             .onClick(async () => {
               const result = await extractSelectionToNewNote(this.app);
-              if (!result.ok) {
+              if (result.ok === false) {
                 new Notice(result.error, 4000);
                 return;
               }
@@ -1972,7 +1972,7 @@ export default class FileOrganizer extends Plugin {
   }
 
   async generateUniqueBackupFileName(originalFile: TFile): Promise<string> {
-    const baseFileName = `${originalFile.basename}_backup_${moment().format(
+    const baseFileName = `${originalFile.basename}_backup_${window.moment().format(
       "YYYYMMDD_HHmmss"
     )}`;
     let fileName = `${baseFileName}.${originalFile.extension}`;

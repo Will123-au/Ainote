@@ -1,7 +1,7 @@
 import * as React from 'react';
 import { Inbox } from '../inbox';
 import { FileRecord, Action, RecordManager } from '../inbox/services/record-manager';
-import { FileOrganizer } from '../index';
+import FileOrganizer from '../index';
 import { getActionDisplayName } from '../inbox/index';
 
 function calculateProgress(record: FileRecord): number {
@@ -141,4 +141,3 @@ export function ProcessingStatusBar({ plugin }: { plugin: FileOrganizer }) {
     </div>
   );
 }
-

@@ -3,16 +3,21 @@
   "compilerOptions": {
     "baseUrl": ".",
     "outDir": "./dist",
-    "rootDir": "./src",
+    "rootDir": ".",
     "composite": true,
     "paths": {
       "@/*": ["*"],
       "@/components/*": ["components/*"]
     }
   },
-  "include": ["src/**/*"],
-  "exclude": ["node_modules"],
-  "references": [
-    { "path": "../shared" }
-  ]
+  "include": [
+    "**/*.ts",
+    "**/*.tsx",
+    "**/*.mjs"
+  ],
+  "exclude": [
+    "node_modules",
+    "dist"
+  ],
+  "references": []
 }

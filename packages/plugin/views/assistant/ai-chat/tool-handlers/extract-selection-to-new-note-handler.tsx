@@ -24,7 +24,7 @@ export function ExtractSelectionToNewNoteHandler({
 
       try {
         const result = await extractSelectionToNewNote(app, options);
-        if (result.ok) {
+        if (result.ok === true) {
           const name =
             result.newFilePath.split("/").pop() ?? result.newFilePath;
           new Notice(`Extracted to ${name}`, 3500);

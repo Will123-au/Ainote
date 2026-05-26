@@ -248,7 +248,7 @@ const suggestion = {
           return true;
         }
 
-        return reactRenderer?.ref?.onKeyDown(props);
+        return (reactRenderer?.ref as { onKeyDown?: (props: any) => boolean } | null)?.onKeyDown?.(props);
       },
 
       onExit() {

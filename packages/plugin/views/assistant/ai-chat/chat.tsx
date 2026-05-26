@@ -1320,7 +1320,7 @@ export const ChatComponent: React.FC<ChatComponentProps> = ({
           foldersCount: Object.keys(folders).length,
           tagsCount: Object.keys(tags).length,
           hasCurrentFile: !!currentFile,
-          currentFile: currentFile?.basename || null,
+          currentFile: currentFile?.title || null,
           timestamp: Date.now(),
         };
 

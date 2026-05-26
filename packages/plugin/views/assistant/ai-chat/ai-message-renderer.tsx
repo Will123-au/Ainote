@@ -187,8 +187,8 @@ export const AIMarkdown: React.FC<AIMarkdownProps> = ({ content, app }) => {
                   {children}
                 </a>
               ),
-              code: ({ inline, children, ...props }) =>
-                inline ? (
+              code: ({ children, className, ...props }) =>
+                !className ? (
                   <code
                     {...props}
                     className="inline-code bg-[--background-modifier-form-field] px-1 py-0.5 rounded text-[--text-accent]"
