@@ -116,7 +116,20 @@ export const UserTemplates: React.FC<UserTemplatesProps> = ({
           onTokenLimitError?.(errorMessage);
         }
 
-        setClassificationStatus("error");
+        try {
+          const fetchedTemplateNames = await plugin.getTemplateNames();
+          setTemplateNames(fetchedTemplateNames);
+          setSelectedTemplateName(null);
+          setContentLoadStatus("success");
+          setClassificationStatus("success");
+          setErrorMessage(
+            "Automatic template detection failed. Select a template manually."
+          );
+        } catch (templateError) {
+          logger.error("Error loading templates after classification failure:", templateError);
+          setErrorMessage("Unable to load templates. Please check your templates folder.");
+          setClassificationStatus("error");
+        }
       }
     };
     fetchClassificationAndTemplates();
@@ -164,7 +177,7 @@ export const UserTemplates: React.FC<UserTemplatesProps> = ({
     if (contentLoadStatus === "error" || classificationStatus === "error") {
       return (
         <div className="text-[--text-error] p-2 bg-[--background-modifier-error]">
-          Unable to process the content. Please try again later.
+          {errorMessage || "Unable to process the content. Please try again later."}
         </div>
       );
     }
@@ -176,6 +189,11 @@ export const UserTemplates: React.FC<UserTemplatesProps> = ({
 
     return (
       <div className="flex flex-col space-y-2">
+        {errorMessage && (
+          <div className="text-[--text-warning] p-2 bg-[--background-secondary]">
+            {errorMessage}
+          </div>
+        )}
         <div className="relative" ref={dropdownRef}>
           <button
             className="w-full flex items-center justify-between px-3 py-2 bg-[--background-secondary] text-[--text-normal] hover:bg-[--background-modifier-hover] transition-colors duration-200"
