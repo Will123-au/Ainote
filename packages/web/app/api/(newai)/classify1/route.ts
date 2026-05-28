@@ -52,9 +52,23 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    const errorMessage =
+      error instanceof Error ? error.message : 'Failed to classify document';
+    const errorName = error instanceof Error ? error.name : '';
+    if (
+      errorName === 'AI_NoObjectGeneratedError' ||
+      errorMessage.includes('No object generated') ||
+      errorMessage.includes('could not parse the response')
+    ) {
+      console.warn(
+        'Classification returned no parseable object; falling back to manual template selection.',
+        error
+      );
+      return NextResponse.json({ documentType: '' });
+    }
+
     // Fallback for other errors
     console.error('Classification error:', error);
-    const errorMessage = error instanceof Error ? error.message : 'Failed to classify document';
     return NextResponse.json(
       { error: errorMessage },
       { status: 500 }
