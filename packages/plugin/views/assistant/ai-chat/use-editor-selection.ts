@@ -1,6 +1,9 @@
 import { useEffect, useState, useRef } from "react";
 import { App, MarkdownView, EditorPosition, EditorSelection } from "obsidian";
-import { syncFrozenEditorSelectionForTools } from "../../../services/editor-selection-store";
+import {
+  clearFrozenEditorSelectionForTools,
+  syncFrozenEditorSelectionForTools,
+} from "../../../services/editor-selection-store";
 
 export interface EditorSelectionContext {
   selectedText: string;
@@ -59,6 +62,7 @@ export function useEditorSelection(app: App): EditorSelectionResult {
   const clearFrozen = () => {
     setFrozenContext(EMPTY_CONTEXT);
     setIsManuallyCleared(true);
+    clearFrozenEditorSelectionForTools();
   };
 
   useEffect(() => {
@@ -130,9 +134,6 @@ export function useEditorSelection(app: App): EditorSelectionResult {
             // Normal case: update frozen context with new selection
             setFrozenContext(newContext);
           }
-        } else {
-          setFrozenContext(EMPTY_CONTEXT);
-          setIsManuallyCleared(false);
         }
       } catch (error) {
         console.error("Error getting editor context:", error);

@@ -164,6 +164,9 @@ Current date and time: ${currentDatetime}
 ### Ambiguous references ("this", "these files", "it")
 Resolve in order: (1) last topic in chat (2) \`<editor_context><selection>\` (3) \`<editor_context><file>\` or latest tool results (4) attached **files** — use each \`path\` character-for-character; do not normalize paths. If the user says "merge those N files" and context lists N files, use those paths. Prefer action over asking when any tier applies.
 
+### Editing selected text
+When the user asks to rewrite, polish, simplify, translate, or change the selected text, use \`modifyDocumentText\` directly with the exact \`<path>\` from \`<editor_context>\`. Do not call \`getFileMetadata\` first. Put the rewritten selected text in \`content\` and the user's request in \`instructions\`; after the tool result, respond with a brief completion message instead of calling another tool.
+
 ### Obsidian links
 Use \`[[Note Title]]\` for vault notes. Never put \`**\` on a line that contains \`[[...]]\` (bold breaks wikilinks). When listing files from tools, use compact lines like \`[[Name]] — detail\` without markdown list prefixes for the link line.`;
 }

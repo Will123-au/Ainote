@@ -657,7 +657,12 @@ export const ChatComponent: React.FC<ChatComponentProps> = ({
             selection,
           };
 
-          freshEditorContext = formatEditorContextForAI(editorContextForAI);
+          const contextForAI =
+            editorContextForAI.hasSelection || !editorContext.hasSelection
+              ? editorContextForAI
+              : editorContext;
+
+          freshEditorContext = formatEditorContextForAI(contextForAI);
         }
       } catch (error) {
         console.warn("[Chat] Failed to get fresh editor context:", error);
@@ -1036,7 +1041,12 @@ export const ChatComponent: React.FC<ChatComponentProps> = ({
                 selection,
               };
 
-              freshEditorContext = formatEditorContextForAI(editorContextForAI);
+              const contextForAI =
+                editorContextForAI.hasSelection || !editorContext.hasSelection
+                  ? editorContextForAI
+                  : editorContext;
+
+              freshEditorContext = formatEditorContextForAI(contextForAI);
             }
           } catch (error) {
             console.warn(

@@ -29,11 +29,13 @@ export function syncFrozenEditorSelectionForTools(
       filePath: ctx.filePath,
       selection: ctx.selection,
     };
-  } else if (!ctx.hasSelection) {
-    frozen = null;
   }
 }
 
 export function getFrozenEditorSelectionForTools(): FrozenEditorSelectionSnapshot | null {
   return frozen;
+}
+
+export function clearFrozenEditorSelectionForTools(): void {
+  frozen = null;
 }

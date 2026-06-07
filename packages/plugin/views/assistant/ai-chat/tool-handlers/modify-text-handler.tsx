@@ -2,6 +2,7 @@ import React, { useRef, useState } from "react";
 import { App, TFile } from "obsidian";
 import { logger } from "../../../../services/logger";
 import { usePlugin } from "../../provider";
+import { getFrozenEditorSelectionForTools } from "../../../../services/editor-selection-store";
 
 interface ModifyTextHandlerProps {
   toolInvocation: any;
@@ -29,8 +30,40 @@ export function ModifyTextHandler({
     content: string;
     targetFile: TFile;
     editor?: any;
+    selection?: {
+      anchor: { line: number; ch: number };
+      head: { line: number; ch: number };
+    } | null;
+    selectedText?: string;
   } | null>(null);
   const plugin = usePlugin();
+
+  const positionToOffset = (
+    text: string,
+    position: { line: number; ch: number }
+  ) => {
+    const lines = text.split("\n");
+    let offset = 0;
+    for (let i = 0; i < position.line; i++) {
+      offset += (lines[i]?.length ?? 0) + 1;
+    }
+    return offset + position.ch;
+  };
+
+  const replaceSelectionInText = (
+    text: string,
+    selection: {
+      anchor: { line: number; ch: number };
+      head: { line: number; ch: number };
+    },
+    replacement: string
+  ) => {
+    const anchorOffset = positionToOffset(text, selection.anchor);
+    const headOffset = positionToOffset(text, selection.head);
+    const from = Math.min(anchorOffset, headOffset);
+    const to = Math.max(anchorOffset, headOffset);
+    return `${text.slice(0, from)}${replacement}${text.slice(to)}`;
+  };
 
   React.useEffect(() => {
     const fetchModifications = async () => {
@@ -53,7 +86,26 @@ export function ModifyTextHandler({
             }
           }
           
-          originalContent = await app.vault.read(targetFile);
+          const fullContent = await app.vault.read(targetFile);
+          const activeFile = app.workspace.getActiveFile();
+          const editor =
+            activeFile?.path === targetFile.path
+              ? app.workspace.activeEditor?.editor
+              : undefined;
+          const liveSelection =
+            activeFile?.path === targetFile.path ? editor?.getSelection() : "";
+          const frozenSelection = getFrozenEditorSelectionForTools();
+          const matchingFrozenSelection =
+            frozenSelection?.filePath === targetFile.path &&
+            frozenSelection.hasSelection &&
+            frozenSelection.selectedText?.trim()
+              ? frozenSelection
+              : null;
+
+          originalContent =
+            liveSelection ||
+            matchingFrozenSelection?.selectedText ||
+            fullContent;
           
           const response = await fetch(`${plugin.getServerUrl()}/api/modify`, {
             method: "POST",
@@ -76,11 +128,15 @@ export function ModifyTextHandler({
           setDiff(data.diff);
           setExplanation(data.explanation);
           
-          const editor = app.workspace.activeEditor?.editor;
           setPendingChanges({
             content: data.content,
             targetFile,
-            editor
+            editor,
+            selection: liveSelection
+              ? null
+              : matchingFrozenSelection?.selection ?? null,
+            selectedText:
+              liveSelection || matchingFrozenSelection?.selectedText || undefined,
           });
           
         } catch (error) {
@@ -99,15 +155,30 @@ export function ModifyTextHandler({
     
     setIsApplying(true);
     try {
-      const { content, targetFile, editor } = pendingChanges;
+      const { content, targetFile, editor, selection, selectedText } = pendingChanges;
       
       if (editor) {
-        const selection = editor.getSelection();
-        if (selection) {
+        const liveSelection = editor.getSelection();
+        if (liveSelection) {
+          editor.replaceSelection(content);
+        } else if (selection) {
+          editor.setSelection(selection.anchor, selection.head);
           editor.replaceSelection(content);
         } else {
           editor.setValue(content);
         }
+      } else if (selection) {
+        const currentContent = await app.vault.read(targetFile);
+        await app.vault.modify(
+          targetFile,
+          replaceSelectionInText(currentContent, selection, content)
+        );
+      } else if (selectedText) {
+        const currentContent = await app.vault.read(targetFile);
+        await app.vault.modify(
+          targetFile,
+          currentContent.replace(selectedText, content)
+        );
       } else {
         await app.vault.modify(targetFile, content);
       }

@@ -88,7 +88,8 @@ export const chatTools = {
     }),
   },
   modifyDocumentText: {
-    description: 'Replace or rewrite note body (selection or whole file)',
+    description:
+      'Replace/rewrite selected text or whole note. For editor_context selection edits, use path from <path>, content = rewritten selection, and do not fetch metadata first.',
     parameters: z.object({
       content: z.string().describe('New markdown'),
       path: z.string().describe('Path; empty = active file'),
