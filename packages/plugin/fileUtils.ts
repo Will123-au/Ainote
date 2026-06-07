@@ -279,26 +279,35 @@ function getEnhanceTemplateContent(): string {
 }
 
 function getEnhancePreserveMediaTemplateContent(): string {
-  return `Improve readability and structure while preserving the original Markdown content.
+  return `Rewrite and enhance this note into a clearer, more useful Obsidian note while preserving every media/link reference.
 
-Critical preservation rules:
-- Do not delete, rewrite, reorder, or summarize any image links.
+Main task:
+- Rewrite rough notes into polished, readable Markdown.
+- Reorganize the material into logical sections with useful headings.
+- Merge duplicate ideas and remove obvious filler.
+- Turn scattered thoughts into concise paragraphs, bullets, tables, or checklists where appropriate.
+- Add a short summary at the top if the note is long.
+- Preserve the original meaning. Do not invent facts.
+
+Media and link preservation rules:
 - Preserve every Obsidian embed exactly as written, including ![[...]].
+- Preserve every Obsidian wiki link exactly as written, including [[...]].
 - Preserve every Markdown image exactly as written, including ![](...) and ![alt](...).
-- Preserve every normal Markdown link exactly as written, including [text](...).
-- Preserve attachment lines even if they appear alone.
-- Preserve all existing headings, lists, quotes, tables, code blocks, frontmatter, callouts, and internal links unless only adding clearer structure around them.
-- You may add headings, spacing, bullets, and short summaries, but never remove source content.
-- If unsure whether something is useful, keep it unchanged.
+- Preserve every Markdown link exactly as written, including [text](...).
+- Preserve bare URLs exactly as written.
+- Preserve attachment-only lines even if they have no surrounding explanation.
+- Do not rename, rewrite, summarize, translate, or delete any media/link target.
+- You may move a media/link line into the most relevant section, but the link text itself must remain character-for-character identical.
+- If a media/link reference does not clearly belong anywhere, place it under a section named "Related Media".
 
-Formatting guidance:
-- Use headings and subheadings to make the note easier to scan.
-- Use bullet points or numbered lists where they improve readability.
-- Keep spacing consistent between sections and paragraphs.
-- Use bold or italics sparingly for important terms.
-- Use tables only when the source content naturally fits rows and columns.
-- Keep code blocks for code snippets or technical instructions.
-- Keep images, diagrams, attachments, and cross-references in their original location unless moving them is necessary to preserve meaning.
+Output structure:
+- Keep YAML frontmatter at the top if present, preserving existing fields unless a better title/tags can be safely added.
+- Use clear headings and subheadings.
+- Prefer dense, useful sections over decorative formatting.
+- Use tables only for genuinely structured comparisons or lists.
+- Use checklists for tasks and next actions.
+- Keep code blocks for code or transcripts that should remain verbatim.
+- If the source is messy, produce a polished note rather than merely spacing the original text.
 
 Output the complete note in Markdown.`;
 }
