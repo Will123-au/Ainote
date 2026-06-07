@@ -261,7 +261,7 @@ export default class FileOrganizer extends Plugin {
       }
 
       const { content: formattedContent } = await response.json();
-      return formattedContent;
+      return this.stripWrappingMarkdownFence(formattedContent);
     } catch (error) {
       logger.error("Error formatting content:", error);
       new Notice("An error occurred while formatting the content.", 6000);
@@ -322,7 +322,7 @@ export default class FileOrganizer extends Plugin {
 
       let formattedContent = "";
       const updateCallback = async (partialContent: string) => {
-        formattedContent = partialContent;
+        formattedContent = this.stripWrappingMarkdownFence(partialContent);
         await this.app.vault.modify(newFile, formattedContent);
       };
 
@@ -455,6 +455,13 @@ export default class FileOrganizer extends Plugin {
     return cleanedLines.join("\n");
   }
 
+  stripWrappingMarkdownFence(content: string): string {
+    let cleaned = content.trim();
+    cleaned = cleaned.replace(/^```(?:markdown|md)?\s*\n?/i, "");
+    cleaned = cleaned.replace(/\n?```\s*$/i, "");
+    return cleaned;
+  }
+
   async streamFormatInCurrentNote({
     file,
     formattingInstruction,
@@ -475,7 +482,9 @@ export default class FileOrganizer extends Plugin {
       let formattedContent = "";
       const updateCallback = async (partialContent: string) => {
         // Clean up tags before saving
-        formattedContent = this.cleanupTagsInContent(partialContent);
+        formattedContent = this.stripWrappingMarkdownFence(
+          this.cleanupTagsInContent(partialContent)
+        );
         await this.app.vault.modify(file, formattedContent);
       };
       await this.formatStream(
@@ -509,7 +518,7 @@ export default class FileOrganizer extends Plugin {
 
       let formattedContent = "";
       const updateCallback = async (partialContent: string) => {
-        formattedContent = partialContent;
+        formattedContent = this.stripWrappingMarkdownFence(partialContent);
       };
 
       await this.formatStream(
@@ -558,13 +567,13 @@ export default class FileOrganizer extends Plugin {
           const lines = chunk.split("\n");
           const newLines = lines.slice(lastLineCount);
           if (newLines.length > 0) {
-            formattedContent = lines.join("\n");
+            formattedContent = this.stripWrappingMarkdownFence(lines.join("\n"));
             lastLineCount = lines.length;
             await this.app.vault.modify(file, formattedContent);
           }
         } else {
           // For partial mode, just append the new chunk
-          formattedContent = chunk;
+          formattedContent = this.stripWrappingMarkdownFence(chunk);
           await this.app.vault.modify(file, formattedContent);
         }
       };
@@ -673,10 +682,10 @@ export default class FileOrganizer extends Plugin {
 
       const chunk = decoder.decode(value, { stream: true });
       formattedContent += chunk;
-      updateCallback(formattedContent);
+      updateCallback(this.stripWrappingMarkdownFence(formattedContent));
     }
 
-    return formattedContent;
+    return this.stripWrappingMarkdownFence(formattedContent);
   }
 
   /**

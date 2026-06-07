@@ -308,6 +308,8 @@ Output structure:
 - Use checklists for tasks and next actions.
 - Keep code blocks for code or transcripts that should remain verbatim.
 - If the source is messy, produce a polished note rather than merely spacing the original text.
+- Do not wrap the whole answer in a code block.
+- Do not start with \`\`\`markdown or end with \`\`\`.
 
 Output the complete note in Markdown.`;
 }
