@@ -1652,6 +1652,7 @@ export default class FileOrganizer extends Plugin {
               list.createEl("li", { text: "meeting_note.md" });
               list.createEl("li", { text: "youtube_video.md" });
               list.createEl("li", { text: "enhance.md" });
+              list.createEl("li", { text: "enhance_preserve_media.md" });
               list.createEl("li", { text: "research_paper.md" });
               list.createEl("li", { text: "flash_cards.md" });
               contentEl.createEl("p", {

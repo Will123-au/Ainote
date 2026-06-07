@@ -7,6 +7,7 @@ export const DEFAULT_TEMPLATE_NAMES = [
   "meeting_note.md",
   "youtube_video.md",
   "enhance.md",
+  "enhance_preserve_media.md",
   "research_paper.md",
   "flash_cards.md",
 ] as const;
@@ -277,6 +278,31 @@ function getEnhanceTemplateContent(): string {
 10. do not use \`\`\` markdown`;
 }
 
+function getEnhancePreserveMediaTemplateContent(): string {
+  return `Improve readability and structure while preserving the original Markdown content.
+
+Critical preservation rules:
+- Do not delete, rewrite, reorder, or summarize any image links.
+- Preserve every Obsidian embed exactly as written, including ![[...]].
+- Preserve every Markdown image exactly as written, including ![](...) and ![alt](...).
+- Preserve every normal Markdown link exactly as written, including [text](...).
+- Preserve attachment lines even if they appear alone.
+- Preserve all existing headings, lists, quotes, tables, code blocks, frontmatter, callouts, and internal links unless only adding clearer structure around them.
+- You may add headings, spacing, bullets, and short summaries, but never remove source content.
+- If unsure whether something is useful, keep it unchanged.
+
+Formatting guidance:
+- Use headings and subheadings to make the note easier to scan.
+- Use bullet points or numbered lists where they improve readability.
+- Keep spacing consistent between sections and paragraphs.
+- Use bold or italics sparingly for important terms.
+- Use tables only when the source content naturally fits rows and columns.
+- Keep code blocks for code snippets or technical instructions.
+- Keep images, diagrams, attachments, and cross-references in their original location unless moving them is necessary to preserve meaning.
+
+Output the complete note in Markdown.`;
+}
+
 function getFlashCardsTemplateContent(): string {
   return `Please create an Obsidian note with interactive flashcards using native Obsidian HTML features. The note must include:
 
@@ -432,6 +458,7 @@ export async function checkAndCreateTemplates(
   const meetingNoteTemplatePath = `${settings.templatePaths}/meeting_note.md`;
   const youtubeVideoTemplatePath = `${settings.templatePaths}/youtube_video.md`;
   const enhanceTemplatePath = `${settings.templatePaths}/enhance.md`;
+  const enhancePreserveMediaTemplatePath = `${settings.templatePaths}/enhance_preserve_media.md`;
   const researchPaperTemplatePath = `${settings.templatePaths}/research_paper.md`;
   const flashCardsTemplatePath = `${settings.templatePaths}/flash_cards.md`;
 
@@ -460,6 +487,13 @@ export async function checkAndCreateTemplates(
     await app.vault.create(enhanceTemplatePath, getEnhanceTemplateContent());
   }
 
+  if (!(await app.vault.adapter.exists(enhancePreserveMediaTemplatePath))) {
+    await app.vault.create(
+      enhancePreserveMediaTemplatePath,
+      getEnhancePreserveMediaTemplateContent()
+    );
+  }
+
   if (!(await app.vault.adapter.exists(flashCardsTemplatePath))) {
     await app.vault.create(
       flashCardsTemplatePath,
@@ -478,6 +512,7 @@ export async function restoreDefaultTemplates(
     meetingNote: `${settings.templatePaths}/meeting_note.md`,
     youtubeVideo: `${settings.templatePaths}/youtube_video.md`,
     enhance: `${settings.templatePaths}/enhance.md`,
+    enhancePreserveMedia: `${settings.templatePaths}/enhance_preserve_media.md`,
     researchPaper: `${settings.templatePaths}/research_paper.md`,
     flashCards: `${settings.templatePaths}/flash_cards.md`,
   };
@@ -486,6 +521,7 @@ export async function restoreDefaultTemplates(
     meetingNote: getMeetingNoteTemplateContent(),
     youtubeVideo: getYoutubeVideoTemplateContent(),
     enhance: getEnhanceTemplateContent(),
+    enhancePreserveMedia: getEnhancePreserveMediaTemplateContent(),
     researchPaper: getResearchPaperTemplateContent(),
     flashCards: getFlashCardsTemplateContent(),
   };
