@@ -5,6 +5,7 @@ import {
   streamObject,
 } from "ai";
 import { z } from "zod";
+import { FORMAT_SYSTEM_PROMPT, buildFormatUserPrompt } from "./format-prompt";
 import fs from "fs";
 import { promises as fsPromises } from "fs";
 import { tmpdir } from "os";
@@ -292,19 +293,8 @@ export async function formatDocumentContent(
     schema: z.object({
       formattedContent: z.string(),
     }),
-    system: "Answer directly in markdown",
-    prompt: `Format the following content according to the given instruction, only use context if asked in instruction:
-        Context:
-        Time: ${new Date().toISOString()}
-
-
-        Content:
-        "${content}"
-
-        Formatting Instruction:
-        "${formattingInstruction}"
-
-        `,
+    system: FORMAT_SYSTEM_PROMPT,
+    prompt: buildFormatUserPrompt(content, formattingInstruction),
   });
 
   let formattedContent = "";

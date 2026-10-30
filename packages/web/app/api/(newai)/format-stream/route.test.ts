@@ -53,7 +53,7 @@ describe('POST /api/(newai)/format-stream', () => {
       expect(streamText).toHaveBeenCalled();
       const callArgs = (streamText as jest.Mock).mock.calls[0][0];
       expect(callArgs.model).toEqual({ modelId: 'gpt-4o-mini' });
-      expect(callArgs.system).toBe('Answer directly in markdown');
+      expect(callArgs.system).toContain('Output ONLY the final note');
     });
 
     it('should handle YouTube transcript in content', async () => {
@@ -339,7 +339,7 @@ More content here.
       await POST(request);
 
       const callArgs = (streamText as jest.Mock).mock.calls[0][0];
-      expect(callArgs.messages[0].content).toContain('Time:');
+      expect(callArgs.messages[0].content).toContain('Current time:');
       expect(callArgs.messages[0].content).toMatch(/\d{4}-\d{2}-\d{2}T/); // ISO date format
     });
   });

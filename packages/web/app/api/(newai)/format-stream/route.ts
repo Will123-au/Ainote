@@ -4,6 +4,7 @@ import { NextResponse, NextRequest } from 'next/server';
 import { incrementAndLogTokenUsage } from '@/lib/incrementAndLogTokenUsage';
 import { handleAuthorizationV2 } from '@/lib/handleAuthorization';
 import { getModel } from '@/lib/models';
+import { FORMAT_SYSTEM_PROMPT, buildFormatUserPrompt } from '../format-prompt';
 
 export const maxDuration = 800;
 
@@ -40,31 +41,17 @@ export async function POST(request: NextRequest) {
 
     const result = await streamText({
       model: model as any,
-      system: 'Answer directly in markdown',
+      system: FORMAT_SYSTEM_PROMPT,
       messages: [
         {
           role: 'user',
-          content: hasYouTubeTranscript
-            ? `Format the following content according to the given instruction. IMPORTANT: The content includes a YouTube video transcript in the "Full Transcript" section - you MUST use this transcript to create a comprehensive, detailed summary as instructed.${yamlReminder}
-
-Context:
-  Time: ${new Date().toISOString()}
-
-Content:
-"${content}"
-
-Formatting Instruction:
-"${formattingInstruction}"`
-            : `Format the following content according to the given instruction.${yamlReminder}
-
-Context:
-  Time: ${new Date().toISOString()}
-
-Content:
-"${content}"
-
-Formatting Instruction:
-"${formattingInstruction}"`,
+          content: buildFormatUserPrompt(
+            content,
+            formattingInstruction,
+            (hasYouTubeTranscript
+              ? ' IMPORTANT: The note includes a YouTube video transcript in the "Full Transcript" section - you MUST use this transcript to create a comprehensive, detailed summary as instructed.'
+              : '') + yamlReminder
+          ),
         },
       ],
       onFinish: async ({ usage }) => {
