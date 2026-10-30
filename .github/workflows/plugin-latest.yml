@@ -1,0 +1,82 @@
+name: Plugin Latest Build
+
+# Builds the Obsidian plugin from this fork and publishes it as a zip
+# on the "plugin-latest" release:
+#   https://github.com/Will123-au/Ainote/releases/tag/plugin-latest
+#
+# Install: unzip, copy main.js, styles.css and manifest.json into
+#   <vault>/.obsidian/plugins/fileorganizer2000/
+# then restart Obsidian.
+
+on:
+  push:
+    branches: [master]
+    paths:
+      - "packages/plugin/**"
+      - "manifest.json"
+      - ".github/workflows/plugin-latest.yml"
+  workflow_dispatch: # "Run workflow" button on the Actions page
+
+permissions:
+  contents: write
+
+concurrency:
+  group: plugin-latest
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out code
+        uses: actions/checkout@v4
+
+      - name: Use Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 10.8.1
+
+      - name: Install plugin dependencies only
+        run: pnpm install --frozen-lockfile --filter "./packages/plugin..."
+
+      - name: Run plugin tests
+        working-directory: packages/plugin
+        run: npx jest views/assistant/ai-chat
+
+      - name: Build plugin
+        working-directory: packages/plugin
+        run: pnpm build # writes to packages/plugin/dist on GitHub Actions
+
+      - name: Make zip
+        run: |
+          set -e
+          mkdir -p out/fileorganizer2000
+          cp packages/plugin/dist/main.js out/fileorganizer2000/
+          cp packages/plugin/dist/styles.css out/fileorganizer2000/
+          cp manifest.json out/fileorganizer2000/
+          cd out && zip -r ainote-plugin.zip fileorganizer2000
+          ls -la
+
+      - name: Publish to plugin-latest release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -e
+          SHORT_SHA="${GITHUB_SHA::7}"
+          NOTES="Built from commit ${SHORT_SHA} on $(date -u '+%Y-%m-%d %H:%M UTC').
+
+          Install: unzip, copy the 3 files into <vault>/.obsidian/plugins/fileorganizer2000/, restart Obsidian.
+          Do not click 'Update' for Note Companion in Obsidian, or it will switch back to the store version."
+
+          # Move the tag to this commit and replace the release
+          gh release delete plugin-latest --yes --cleanup-tag || true
+          gh release create plugin-latest out/ainote-plugin.zip \
+            --title "Plugin latest (${SHORT_SHA})" \
+            --notes "$NOTES" \
+            --target "$GITHUB_SHA" \
+            --latest
