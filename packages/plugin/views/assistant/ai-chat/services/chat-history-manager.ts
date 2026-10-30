@@ -4,6 +4,28 @@ import { logger } from "../../../../services/logger";
 
 type TimeoutID = ReturnType<typeof setTimeout>;
 
+/** Text of a stored message, from `content` or (newer format) text `parts`. */
+export function getMessageText(message: any): string {
+  if (typeof message?.content === "string") return message.content;
+  if (Array.isArray(message?.parts)) {
+    return message.parts
+      .filter((p: any) => p?.type === "text" && typeof p.text === "string")
+      .map((p: any) => p.text)
+      .join("");
+  }
+  return "";
+}
+
+/** Make sure every stored message has a string `content`. */
+export function normalizeStoredMessages(messages: unknown): Message[] {
+  if (!Array.isArray(messages)) return [];
+  return messages
+    .filter(m => m && typeof m === "object")
+    .map((m: any) =>
+      typeof m.content === "string" ? m : { ...m, content: getMessageText(m) }
+    );
+}
+
 export interface ChatSession {
   id: string;
   title: string; // Auto-generated from first user message (max 50 chars)
@@ -122,6 +144,12 @@ export class ChatHistoryManager {
         console.warn("[ChatHistory] ⚠️ Unexpected data format:", typeof data);
         console.warn("[ChatHistory] Data content:", JSON.stringify(data).substring(0, 200));
         this.sessions = new Map();
+      }
+
+      // Newer plugin versions (AI SDK v5) save messages with `parts`
+      // and no `content`. Fill in `content` so this version can render them.
+      for (const session of this.sessions.values()) {
+        session.messages = normalizeStoredMessages(session?.messages);
       }
     } catch (error) {
       console.error("[ChatHistory] ❌ Failed to load chat history:", error);
@@ -273,8 +301,8 @@ export class ChatHistoryManager {
    */
   public static generateTitleFromMessages(messages: Message[]): string {
     const firstUserMessage = messages.find(m => m.role === 'user');
-    if (firstUserMessage && firstUserMessage.content) {
-      let title = firstUserMessage.content.trim();
+    if (firstUserMessage && getMessageText(firstUserMessage)) {
+      let title = getMessageText(firstUserMessage).trim();
 
       // Remove all @ mentions completely (not just the @ symbol)
       // This removes patterns like "@file_name", "@my file", "@file_name what is this", etc.

@@ -9,6 +9,7 @@ import { Attachment } from "./types/attachments";
 import { AppendButton } from "./components/append-button";
 import { CopyButton } from "./components/copy-button";
 import { RefreshButton } from "./components/refresh-button";
+import { getMessageText } from "./services/chat-history-manager";
 
 interface MessageRendererProps {
   message: Message & {
@@ -30,7 +31,7 @@ export const MessageRenderer: React.FC<MessageRendererProps> = ({
       return window.moment(message.createdAt).format("MMM D, YYYY h:mm A");
     }
     // Try to extract timestamp from message ID if it contains one
-    const idMatch = message.id.match(/\d+/);
+    const idMatch = String(message.id ?? "").match(/\d+/);
     if (idMatch) {
       const timestamp = parseInt(idMatch[0]);
       if (timestamp > 1000000000000) {
@@ -43,6 +44,8 @@ export const MessageRenderer: React.FC<MessageRendererProps> = ({
   };
 
   const timestamp = getTimestamp();
+  // Works for both old (`content`) and new (`parts`) message formats
+  const text = getMessageText(message);
 
   // Only hide message if it has tool invocations that are NOT complete (no results yet)
   // If all tool invocations have results, we should still render the message content
@@ -56,7 +59,7 @@ export const MessageRenderer: React.FC<MessageRendererProps> = ({
       return null;
     }
   }
-  if (message.content.length === 0) {
+  if (text.length === 0) {
     return null;
   }
 
@@ -87,9 +90,9 @@ export const MessageRenderer: React.FC<MessageRendererProps> = ({
           style={{ marginTop: 0, paddingTop: 0, marginLeft: 0, paddingLeft: 0 }}
         >
           {message.role === "user" ? (
-            <UserMarkdown content={message.content} />
+            <UserMarkdown content={text} />
           ) : (
-            <AIMarkdown content={message.content} app={plugin.app} />
+            <AIMarkdown content={text} app={plugin.app} />
           )}
         </div>
 
@@ -107,8 +110,8 @@ export const MessageRenderer: React.FC<MessageRendererProps> = ({
                   onRefresh={onMessageRefresh}
                 />
               )}
-              <AppendButton content={message.content} />
-              <CopyButton content={message.content} />
+              <AppendButton content={text} />
+              <CopyButton content={text} />
             </div>
           )}
         </div>
